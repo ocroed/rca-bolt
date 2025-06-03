@@ -7,7 +7,6 @@ import {
   Settings, 
   Users, 
   Calendar, 
-  TrendingUp,
   AlertTriangle,
   FileBarChart
 } from 'lucide-react';
@@ -52,11 +51,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
             to="/rca-database"
             icon={<FileText size={18} />} 
             label="RCA Database" 
-          />
-          <SidebarLink 
-            to="/impact-analysis"
-            icon={<TrendingUp size={18} />} 
-            label="Impact Analysis" 
           />
           
           <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase">
