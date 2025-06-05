@@ -1,59 +1,108 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
-import { mockRCAs } from '../../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, TrendingDown, Clock, CheckCircle, AlertTriangle, Loader2, AlertCircle } from 'lucide-react';
+import { api } from '../../services/api';
 import { 
   formatCurrency, 
-  formatDowntime, 
-  calculateTotalImpact, 
-  calculateTotalDowntime 
+  formatDowntime
 } from '../../utils/formatters';
 
+interface DashboardStatsData {
+  totalImpact: number;
+  totalDowntime: number;
+  ongoingCount: number;
+  completedCount: number;
+}
+
 const DashboardStats: React.FC = () => {
-  const totalImpact = calculateTotalImpact(mockRCAs);
-  const totalDowntime = calculateTotalDowntime(mockRCAs);
-  
-  const ongoingRCAs = mockRCAs.filter(rca => 
-    rca.status === 'draft' || rca.status === 'in-progress' || rca.status === 'review'
-  );
-  
-  const completedRCAs = mockRCAs.filter(rca => 
-    rca.status === 'completed' || rca.status === 'archived'
-  );
-  
-  const criticalRCAs = mockRCAs.filter(rca => rca.impact.severityLevel >= 4);
+  const [statsData, setStatsData] = useState<DashboardStatsData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await api.rca.getDashboardStats();
+        setStatsData(data);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred');
+        }
+        console.error("Failed to fetch dashboard stats:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {Array(4).fill(0).map((_, index) => (
+          <div key={index} className="bg-white rounded-lg shadow-sm p-4 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-full"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
+        <AlertCircle size={20} className="mr-2" />
+        <p><span className="font-semibold">Error:</span> {error}</p>
+      </div>
+    );
+  }
+
+  if (!statsData) {
+    return (
+      <div className="col-span-full text-center py-10 text-gray-500">
+        No dashboard statistics available.
+      </div>
+    );
+  }
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <StatCard 
         title="Total Financial Impact"
-        value={formatCurrency(totalImpact)}
-        icon={<TrendingDown className="text-red-500\" size={24} />}
-        trend="12.5% increase from last quarter"
-        trendUp={false}
+        value={formatCurrency(statsData.totalImpact)}
+        icon={<TrendingDown className="text-red-500" size={24} />}
+        trend="Updated from live data" // Trend data source TBD
+        trendUp={null} // Or determine based on comparison if available
       />
       
       <StatCard 
         title="Total Downtime"
-        value={formatDowntime(totalDowntime)}
-        icon={<Clock className="text-amber-500\" size={24} />}
-        trend="3.2 days less than previous quarter"
-        trendUp={true}
+        value={formatDowntime(statsData.totalDowntime)}
+        icon={<Clock className="text-amber-500" size={24} />}
+        trend="Updated from live data" // Trend data source TBD
+        trendUp={null} // Or determine based on comparison if available
       />
       
       <StatCard 
         title="Ongoing RCAs"
-        value={ongoingRCAs.length.toString()}
-        icon={<AlertTriangle className="text-blue-500\" size={24} />}
-        trend={`${ongoingRCAs.length} requiring immediate attention`}
+        value={statsData.ongoingCount.toString()}
+        icon={<AlertTriangle className="text-blue-500" size={24} />}
+        trend={`${statsData.ongoingCount} requiring attention`}
         trendUp={null}
       />
       
       <StatCard 
         title="Completed RCAs"
-        value={completedRCAs.length.toString()}
-        icon={<CheckCircle className="text-green-500\" size={24} />}
-        trend={`${criticalRCAs.length} critical issues resolved`}
-        trendUp={true}
+        value={statsData.completedCount.toString()}
+        icon={<CheckCircle className="text-green-500" size={24} />}
+        trend={`${statsData.completedCount} issues resolved`} // Using completedCount for trend
+        trendUp={true} // Assuming more completed is good
       />
     </div>
   );
