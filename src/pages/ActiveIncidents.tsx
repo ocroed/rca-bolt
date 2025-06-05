@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, Filter, SortAsc, Clock, MapPin } from 'lucide-react';
 import { mockRCAs } from '../data/mockData';
 import { formatDate, formatCurrency, getSeverityInfo } from '../utils/formatters';
+import { useFilteredIncidents } from '../hooks/useFilteredIncidents';
 import type { RootCauseAnalysis } from '../types';
 
 const ActiveIncidents: React.FC = () => {
@@ -9,29 +10,12 @@ const ActiveIncidents: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'severity' | 'impact'>('date');
 
-  // Filter active RCAs (draft, in-progress, review)
-  const activeRCAs = mockRCAs.filter(rca => 
-    ['draft', 'in-progress', 'review'].includes(rca.status)
-  );
-
-  // Get unique locations for filter
-  const locations = Array.from(new Set(activeRCAs.map(rca => rca.location || 'Unspecified')));
-
-  // Apply severity and location filters, then sorting
-  const filteredRCAs = activeRCAs
-    .filter(rca => filterSeverity === 'all' || rca.impact.severityLevel === filterSeverity)
-    .filter(rca => filterLocation === 'all' || (rca.location || 'Unspecified') === filterLocation)
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'severity':
-          return b.impact.severityLevel - a.impact.severityLevel;
-        case 'impact':
-          return b.impact.financialCost - a.impact.financialCost;
-        case 'date':
-        default:
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      }
-    });
+  const { filteredIncidents, uniqueLocations } = useFilteredIncidents({
+    allIncidents: mockRCAs,
+    filterSeverity,
+    filterLocation,
+    sortBy,
+  });
 
   return (
     <div className="space-y-6">
@@ -41,7 +25,7 @@ const ActiveIncidents: React.FC = () => {
             <AlertTriangle className="mr-2 text-amber-500" />
             Active Incidents
           </h1>
-          <p className="text-gray-600">Monitoring {filteredRCAs.length} active RCAs</p>
+          <p className="text-gray-600">Monitoring {filteredIncidents.length} active RCAs</p>
         </div>
 
         <div className="flex space-x-4">
@@ -52,10 +36,10 @@ const ActiveIncidents: React.FC = () => {
               onChange={(e) => setFilterLocation(e.target.value)}
               className="border rounded-md px-2 py-1 text-sm"
             >
-              <option value="all">All Locations</option>
-              {locations.sort().map(location => (
+              {/* <option value="all">All Locations</option> uniqueLocations from hook includes 'all' */}
+              {uniqueLocations.map(location => (
                 <option key={location} value={location}>
-                  {location}
+                  {location === 'all' ? 'All Locations' : location}
                 </option>
               ))}
             </select>
@@ -91,7 +75,7 @@ const ActiveIncidents: React.FC = () => {
       </div>
 
       <div className="grid gap-4">
-        {filteredRCAs.map(rca => (
+        {filteredIncidents.map(rca => (
           <IncidentCard key={rca.id} rca={rca} />
         ))}
       </div>

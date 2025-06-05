@@ -1,5 +1,7 @@
 export type RCAStatus = 'draft' | 'in-progress' | 'review' | 'completed' | 'archived';
 
+export type RCASeverityLevel = 1 | 2 | 3 | 4 | 5;
+
 export type RCAImpact = {
   financialCost: number;
   downtimeDays: number;

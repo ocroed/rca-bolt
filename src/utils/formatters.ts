@@ -1,3 +1,5 @@
+import type { RootCauseAnalysis, RCAStatus, RCASeverityLevel } from '../types';
+
 /**
  * Format a number as currency (USD)
  */
@@ -43,7 +45,7 @@ export const formatDate = (dateString: string): string => {
 /**
  * Get status color based on RCA status
  */
-export const getStatusColor = (status: string): string => {
+export const getStatusColor = (status: RCAStatus): string => {
   switch (status) {
     case 'draft':
       return 'bg-gray-300 text-gray-800';
@@ -63,7 +65,7 @@ export const getStatusColor = (status: string): string => {
 /**
  * Get severity level label and color
  */
-export const getSeverityInfo = (level: number): { label: string; color: string } => {
+export const getSeverityInfo = (level: RCASeverityLevel): { label: string; color: string } => {
   switch (level) {
     case 1:
       return { 
@@ -101,13 +103,13 @@ export const getSeverityInfo = (level: number): { label: string; color: string }
 /**
  * Calculate total financial impact
  */
-export const calculateTotalImpact = (rcas: any[]): number => {
+export const calculateTotalImpact = (rcas: RootCauseAnalysis[]): number => {
   return rcas.reduce((total, rca) => total + rca.impact.financialCost, 0);
 };
 
 /**
  * Calculate total downtime
  */
-export const calculateTotalDowntime = (rcas: any[]): number => {
+export const calculateTotalDowntime = (rcas: RootCauseAnalysis[]): number => {
   return rcas.reduce((total, rca) => total + rca.impact.downtimeDays, 0);
 };
