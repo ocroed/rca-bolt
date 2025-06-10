@@ -21,16 +21,9 @@ const pca = new PublicClientApplication(configuration);
 
 const getToken = async () => {
   try {
-    await pca.initialize();
     const accountId = localStorage.getItem(SESSION_STORAGE_ACCOUNT_KEY);
     const account = (accountId ? pca.getAccount({ localAccountId: accountId }) : undefined) ?? undefined;
 
-    const redirectResponse = await pca.handleRedirectPromise();
-    if (redirectResponse !== null) {
-      const response = redirectResponse;
-      localStorage.setItem('account', response.account.localAccountId ?? '');
-      return response.accessToken;
-    }
     try {
       const token = await pca.acquireTokenSilent({
         account,
