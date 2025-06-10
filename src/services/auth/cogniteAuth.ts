@@ -34,29 +34,17 @@ const getToken = async () => {
     const accountId = localStorage.getItem(SESSION_STORAGE_ACCOUNT_KEY);
     const account = accountId ? pca.getAccount({ localAccountId: accountId }) : null;
 
-    // Handle redirect response first
-    const redirectResponse = await pca.handleRedirectPromise();
-    if (redirectResponse !== null && redirectResponse.account) {
-      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, redirectResponse.account.localAccountId || '');
-      return redirectResponse.accessToken;
-    }
-
     if (!account) {
       throw new Error('No account found. Please login again.');
     }
 
-    try {
-      const token = await pca.acquireTokenSilent({
-        account,
-        scopes,
-      });
-      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, token.account.localAccountId || '');
-      return token.accessToken;
-    } catch (error) {
-      // If acquireTokenSilent fails, throw the error to let the main auth flow handle user interaction
-      // Do not call acquireTokenRedirect here as it can cause MSAL state issues
-      throw error;
-    }
+    // Only attempt silent token acquisition - do not initiate redirects from here
+    const token = await pca.acquireTokenSilent({
+      account,
+      scopes,
+    });
+    localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, token.account.localAccountId || '');
+    return token.accessToken;
   } catch (error) {
     console.debug('Failed to get token', error);
     throw error;
@@ -101,8 +89,8 @@ export class CogniteAuthService {
   private pca: PublicClientApplication;
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
-  private loginInProgress = false;
-  private logoutInProgress = false;
+  private interactionInProgress = false;
+  private redirectHandled = false;
 
   constructor() {
     this.pca = pca;
@@ -135,14 +123,14 @@ export class CogniteAuthService {
     }
     
     // Prevent multiple concurrent login attempts
-    if (this.loginInProgress) {
+    if (this.interactionInProgress) {
       throw new Error('Login is already in progress. Please wait...');
     }
 
     try {
-      this.loginInProgress = true;
+      this.interactionInProgress = true;
 
-      // Check if user is already authenticated
+      // First, check if user is already authenticated
       const accounts = this.pca.getAllAccounts();
       if (accounts && accounts.length > 0) {
         const account = accounts[0];
@@ -184,7 +172,7 @@ export class CogniteAuthService {
       
       throw error;
     } finally {
-      this.loginInProgress = false;
+      this.interactionInProgress = false;
     }
   }
 
@@ -198,12 +186,12 @@ export class CogniteAuthService {
       return;
     }
     
-    if (this.logoutInProgress) {
+    if (this.interactionInProgress) {
       return;
     }
 
     try {
-      this.logoutInProgress = true;
+      this.interactionInProgress = true;
       
       const accountId = localStorage.getItem(SESSION_STORAGE_ACCOUNT_KEY);
       const account = accountId ? this.pca.getAccount({ localAccountId: accountId }) : null;
@@ -227,7 +215,7 @@ export class CogniteAuthService {
       console.error('Logout error:', error);
       // Even if logout fails, we've cleared local storage
     } finally {
-      this.logoutInProgress = false;
+      this.interactionInProgress = false;
     }
   }
 
@@ -289,8 +277,15 @@ export class CogniteAuthService {
   async handleRedirectResponse() {
     await this.initialize();
     
+    // Prevent handling redirect response multiple times
+    if (this.redirectHandled) {
+      return null;
+    }
+    
     try {
       const response = await this.pca.handleRedirectPromise();
+      this.redirectHandled = true;
+      
       if (response && response.account) {
         localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId || '');
         return response;
@@ -325,6 +320,10 @@ export class CogniteAuthService {
           }
         }
       }
+      
+      // Reset flags
+      this.interactionInProgress = false;
+      this.redirectHandled = false;
     } catch (error) {
       console.error('Error clearing auth state:', error);
     }
@@ -367,6 +366,11 @@ export class CogniteAuthService {
   // Method to check if app is running in iframe
   isInIframe(): boolean {
     return isInIframe();
+  }
+
+  // Method to check if interaction is in progress
+  isInteractionInProgress(): boolean {
+    return this.interactionInProgress;
   }
 }
 

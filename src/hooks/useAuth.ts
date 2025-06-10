@@ -25,7 +25,7 @@ export const useAuth = () => {
     try {
       updateState({ isLoading: true, error: null });
 
-      // Handle any redirect response first - this is crucial for redirect flow
+      // CRITICAL: Handle redirect response first - this must complete before any other MSAL operations
       const redirectResponse = await authService.handleRedirectResponse();
       
       // If we just handled a successful redirect, the user is now authenticated
@@ -39,7 +39,7 @@ export const useAuth = () => {
         return;
       }
       
-      // Check authentication status
+      // Only after redirect handling is complete, check authentication status
       const authenticated = await authService.isAuthenticated();
       
       let user = null;
@@ -80,6 +80,11 @@ export const useAuth = () => {
     try {
       updateState({ error: null });
       
+      // Check if interaction is already in progress
+      if (authService.isInteractionInProgress()) {
+        throw new Error('Login is already in progress. Please wait...');
+      }
+      
       // For redirect flow, this will redirect the page
       // So we won't get a response back immediately
       await authService.login();
@@ -97,6 +102,11 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     try {
       updateState({ error: null });
+      
+      // Check if interaction is already in progress
+      if (authService.isInteractionInProgress()) {
+        return;
+      }
       
       // For redirect flow, this will redirect the page
       await authService.logout();
