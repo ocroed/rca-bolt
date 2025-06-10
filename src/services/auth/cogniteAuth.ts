@@ -20,7 +20,7 @@ const configuration: Configuration = {
     storeAuthStateInCookie: false,
   },
   system: {
-    allowNativeBroker: false, // Disable native broker to avoid iframe issues
+    allowNativeBroker: false,
     windowHashTimeout: 60000,
     iframeHashTimeout: 6000,
   }
@@ -30,21 +30,39 @@ const pca = new PublicClientApplication(configuration);
 
 const getToken = async () => {
   try {
+    await pca.initialize();
     const accountId = localStorage.getItem(SESSION_STORAGE_ACCOUNT_KEY);
     const account = accountId ? pca.getAccount({ localAccountId: accountId }) : null;
+
+    // Handle redirect response first
+    const redirectResponse = await pca.handleRedirectPromise();
+    if (redirectResponse !== null && redirectResponse.account) {
+      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, redirectResponse.account.localAccountId || '');
+      return redirectResponse.accessToken;
+    }
 
     if (!account) {
       throw new Error('No account found. Please login again.');
     }
 
-    const token = await pca.acquireTokenSilent({
-      account,
-      scopes,
-    });
-    
-    return token.accessToken;
+    try {
+      const token = await pca.acquireTokenSilent({
+        account,
+        scopes,
+      });
+      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, token.account.localAccountId || '');
+      return token.accessToken;
+    } catch (error) {
+      if (error instanceof InteractionRequiredAuthError) {
+        await pca.acquireTokenRedirect({
+          account,
+          scopes,
+        });
+      }
+      throw error;
+    }
   } catch (error) {
-    console.debug('Silent token acquisition failed:', error);
+    console.debug('Failed to get token', error);
     throw error;
   }
 };
@@ -73,7 +91,9 @@ const isInIframe = (): boolean => {
 const breakOutOfIframe = (): void => {
   if (isInIframe()) {
     try {
-      window.top!.location.href = window.location.href;
+      if (window.top) {
+        window.top.location.href = window.location.href;
+      }
     } catch (e) {
       // If we can't access window.top, redirect current window
       window.location.href = window.location.href;
@@ -128,10 +148,12 @@ export class CogniteAuthService {
 
       // Check if user is already authenticated
       const accounts = this.pca.getAllAccounts();
-      if (accounts.length > 0) {
+      if (accounts && accounts.length > 0) {
         const account = accounts[0];
-        localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, account.localAccountId ?? '');
-        return { account };
+        if (account && account.localAccountId) {
+          localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, account.localAccountId);
+          return { account };
+        }
       }
 
       // Ensure we're in the top-level window before attempting redirect
@@ -143,7 +165,7 @@ export class CogniteAuthService {
       await this.pca.loginRedirect({
         scopes,
         prompt: 'select_account',
-        redirectStartPage: window.location.href, // Ensure we return to the current page
+        redirectStartPage: window.location.href,
       });
       
       // Note: This won't return anything as the page will redirect
@@ -226,10 +248,12 @@ export class CogniteAuthService {
 
     // Fallback: check all accounts
     const accounts = this.pca.getAllAccounts();
-    if (accounts.length > 0) {
+    if (accounts && accounts.length > 0) {
       const account = accounts[0];
-      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, account.localAccountId ?? '');
-      return account;
+      if (account && account.localAccountId) {
+        localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, account.localAccountId);
+        return account;
+      }
     }
 
     return null;
@@ -272,7 +296,7 @@ export class CogniteAuthService {
     try {
       const response = await this.pca.handleRedirectPromise();
       if (response && response.account) {
-        localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId ?? '');
+        localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId || '');
         return response;
       }
       return response;
@@ -295,12 +319,14 @@ export class CogniteAuthService {
       
       // Clear all MSAL cache
       const accounts = this.pca.getAllAccounts();
-      for (const account of accounts) {
-        try {
-          await this.pca.logoutSilent({ account });
-        } catch (error) {
-          // Ignore silent logout errors during cleanup
-          console.debug('Silent logout failed during cleanup:', error);
+      if (accounts && accounts.length > 0) {
+        for (const account of accounts) {
+          try {
+            await this.pca.logoutSilent({ account });
+          } catch (error) {
+            // Ignore silent logout errors during cleanup
+            console.debug('Silent logout failed during cleanup:', error);
+          }
         }
       }
     } catch (error) {
