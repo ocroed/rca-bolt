@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FileBarChart, Loader2, AlertCircle, Building2, Shield, RefreshCw } from 'lucide-react';
+import { FileBarChart, Loader2, AlertCircle, Building2, Shield, RefreshCw, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { authService } from '../../services/auth/cogniteAuth';
 
 const LoginPage: React.FC = () => {
   const { login, error, clearError, retryAuth } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
 
   const handleLogin = async () => {
     if (isLoading) return;
@@ -34,10 +36,65 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Clear any existing errors when component mounts
+  const handleOpenInNewWindow = () => {
+    // Open the application in a new window/tab to escape iframe
+    const newWindow = window.open(window.location.href, '_blank');
+    if (newWindow) {
+      newWindow.focus();
+    }
+  };
+
+  // Check if we're in an iframe
   useEffect(() => {
+    setIsInIframe(authService.isInIframe());
     clearError();
   }, [clearError]);
+
+  // If we're in an iframe, show a special message
+  if (isInIframe) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-amber-200">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-amber-500 p-3 rounded-xl shadow-lg">
+                  <ExternalLink size={32} className="text-white" />
+                </div>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Open in New Window</h1>
+              <p className="text-gray-600">
+                This application needs to run in the main browser window for secure authentication.
+              </p>
+            </div>
+
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start">
+                <AlertCircle size={16} className="text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-amber-700">
+                  <strong>Security Notice:</strong> Authentication requires the application to run in the top-level browser window to ensure secure communication with Microsoft's login services.
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleOpenInNewWindow}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
+            >
+              <ExternalLink size={18} className="mr-2" />
+              Open RCA Center in New Window
+            </button>
+
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500">
+                Click the button above to open the application in a new window where authentication will work properly.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">

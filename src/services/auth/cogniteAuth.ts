@@ -19,6 +19,11 @@ const configuration: Configuration = {
     cacheLocation: 'localStorage',
     storeAuthStateInCookie: false,
   },
+  system: {
+    allowNativeBroker: false, // Disable native broker to avoid iframe issues
+    windowHashTimeout: 60000,
+    iframeHashTimeout: 6000,
+  }
 };
 
 const pca = new PublicClientApplication(configuration);
@@ -55,6 +60,27 @@ export function getClient() {
   return client;
 }
 
+// Helper function to ensure we're in the top-level window
+const isInIframe = (): boolean => {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+};
+
+// Helper function to break out of iframe if needed
+const breakOutOfIframe = (): void => {
+  if (isInIframe()) {
+    try {
+      window.top!.location.href = window.location.href;
+    } catch (e) {
+      // If we can't access window.top, redirect current window
+      window.location.href = window.location.href;
+    }
+  }
+};
+
 export class CogniteAuthService {
   private pca: PublicClientApplication;
   private initialized = false;
@@ -85,6 +111,13 @@ export class CogniteAuthService {
   async login() {
     await this.initialize();
     
+    // Check if we're in an iframe and break out if necessary
+    if (isInIframe()) {
+      console.warn('Application is running in iframe, breaking out to top-level window');
+      breakOutOfIframe();
+      return;
+    }
+    
     // Prevent multiple concurrent login attempts
     if (this.loginInProgress) {
       throw new Error('Login is already in progress. Please wait...');
@@ -101,10 +134,16 @@ export class CogniteAuthService {
         return { account };
       }
 
+      // Ensure we're in the top-level window before attempting redirect
+      if (window.self !== window.top) {
+        throw new Error('Redirect authentication must be initiated from the top-level window');
+      }
+
       // Use redirect for authentication - more reliable than popup
       await this.pca.loginRedirect({
         scopes,
         prompt: 'select_account',
+        redirectStartPage: window.location.href, // Ensure we return to the current page
       });
       
       // Note: This won't return anything as the page will redirect
@@ -118,6 +157,11 @@ export class CogniteAuthService {
         if (error.errorCode === 'interaction_in_progress') {
           throw new Error('Another login process is already running. Please wait and try again.');
         }
+        if (error.errorCode === 'redirect_in_iframe') {
+          // If we get this error, try to break out of iframe
+          breakOutOfIframe();
+          throw new Error('Application must run in the main browser window. Redirecting...');
+        }
       }
       
       throw error;
@@ -128,6 +172,13 @@ export class CogniteAuthService {
 
   async logout() {
     await this.initialize();
+    
+    // Check if we're in an iframe and break out if necessary
+    if (isInIframe()) {
+      console.warn('Application is running in iframe, breaking out to top-level window for logout');
+      breakOutOfIframe();
+      return;
+    }
     
     if (this.logoutInProgress) {
       return;
@@ -143,6 +194,11 @@ export class CogniteAuthService {
       localStorage.removeItem(SESSION_STORAGE_ACCOUNT_KEY);
       
       if (account) {
+        // Ensure we're in the top-level window before attempting redirect
+        if (window.self !== window.top) {
+          throw new Error('Logout redirect must be initiated from the top-level window');
+        }
+        
         // Use redirect logout for consistency
         await this.pca.logoutRedirect({
           account,
@@ -222,6 +278,12 @@ export class CogniteAuthService {
       return response;
     } catch (error) {
       console.error('Error handling redirect response:', error);
+      
+      // If we get iframe error during redirect handling, try to break out
+      if (error instanceof BrowserAuthError && error.errorCode === 'redirect_in_iframe') {
+        breakOutOfIframe();
+      }
+      
       throw error;
     }
   }
@@ -250,6 +312,15 @@ export class CogniteAuthService {
   async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details: string }> {
     try {
       await this.initialize();
+      
+      // Check if we're in iframe
+      if (isInIframe()) {
+        return { 
+          status: 'unhealthy', 
+          details: 'Application is running in iframe - authentication may not work properly' 
+        };
+      }
+      
       const account = await this.getAccount();
       
       if (!account) {
@@ -269,6 +340,11 @@ export class CogniteAuthService {
         details: `Authentication error: ${error instanceof Error ? error.message : 'Unknown error'}` 
       };
     }
+  }
+
+  // Method to check if app is running in iframe
+  isInIframe(): boolean {
+    return isInIframe();
   }
 }
 
