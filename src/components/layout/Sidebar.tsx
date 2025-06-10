@@ -3,10 +3,6 @@ import { useLocation, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
-  BarChart3, 
-  Settings, 
-  Users, 
-  Calendar, 
   AlertTriangle,
   FileBarChart
 } from 'lucide-react';
@@ -51,31 +47,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen }) => {
             to="/rca-database"
             icon={<FileText size={18} />} 
             label="RCA Database" 
-          />
-          
-          <div className="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase">
-            Management
-          </div>
-          
-          <SidebarLink 
-            to="/team"
-            icon={<Users size={18} />} 
-            label="Team Management" 
-          />
-          <SidebarLink 
-            to="/schedule"
-            icon={<Calendar size={18} />} 
-            label="Schedule" 
-          />
-          <SidebarLink 
-            to="/reports"
-            icon={<BarChart3 size={18} />} 
-            label="Reports" 
-          />
-          <SidebarLink 
-            to="/settings"
-            icon={<Settings size={18} />} 
-            label="Settings" 
           />
         </nav>
         
