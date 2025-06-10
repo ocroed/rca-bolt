@@ -53,12 +53,8 @@ const getToken = async () => {
       localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, token.account.localAccountId || '');
       return token.accessToken;
     } catch (error) {
-      if (error instanceof InteractionRequiredAuthError) {
-        await pca.acquireTokenRedirect({
-          account,
-          scopes,
-        });
-      }
+      // If acquireTokenSilent fails, throw the error to let the main auth flow handle user interaction
+      // Do not call acquireTokenRedirect here as it can cause MSAL state issues
       throw error;
     }
   } catch (error) {
