@@ -88,7 +88,7 @@ export class CogniteAuthService {
     
     // Prevent multiple concurrent login attempts
     if (this.loginInProgress) {
-      throw new Error('Login already in progress. Please wait.');
+      throw new Error('A login process is already active. Please wait for it to complete before trying again.');
     }
 
     try {
@@ -121,7 +121,7 @@ export class CogniteAuthService {
       // Handle specific MSAL errors
       if (error instanceof BrowserAuthError) {
         if (error.errorCode === 'interaction_in_progress') {
-          throw new Error('Another login is already in progress. Please wait and try again.');
+          throw new Error('Another authentication process is already running. Please close any open login popups, wait a moment, and try again. If the issue persists, try clearing your browser cache or use the "Clear and retry" option.');
         } else if (error.errorCode === 'popup_window_error') {
           throw new Error('Popup was blocked or closed. Please allow popups and try again.');
         }
