@@ -48,7 +48,7 @@ function App() {
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/active-incidents" element={<ActiveIncidents />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard\" replace />} />
         </Routes>
       </Layout>
     </BrowserRouter>
