@@ -33,7 +33,7 @@ const getToken = async () => {
       return token.accessToken;
     } catch (e) {
       // Don't initiate interactive authentication here to avoid conflicts
-      // Let the LoginPage handle interactive authentication via loginPopup
+      // Let the LoginPage handle interactive authentication via loginRedirect
       throw new Error('Silent token acquisition failed. Interactive login required.');
     }
   } catch (e) {
@@ -71,11 +71,10 @@ export class CogniteAuthService {
   async login() {
     await this.initialize();
     try {
-      const response = await this.pca.loginPopup({
+      // Use loginRedirect instead of loginPopup to avoid interaction conflicts
+      await this.pca.loginRedirect({
         scopes,
       });
-      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId ?? '');
-      return response;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -88,7 +87,7 @@ export class CogniteAuthService {
     const account = accountId ? this.pca.getAccount({ localAccountId: accountId }) : null;
     
     if (account) {
-      await this.pca.logoutPopup({
+      await this.pca.logoutRedirect({
         account,
       });
     }

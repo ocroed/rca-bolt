@@ -2,11 +2,7 @@ import React, { useState } from 'react';
 import { FileBarChart, Loader2, AlertCircle, Building2, Shield } from 'lucide-react';
 import { authService } from '../../services/auth/cogniteAuth';
 
-interface LoginPageProps {
-  onLoginSuccess: () => void;
-}
-
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,11 +12,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     
     try {
       await authService.login();
-      onLoginSuccess();
+      // loginRedirect will cause a page redirect, so no need for onLoginSuccess callback
     } catch (err) {
       console.error('Login error:', err);
       setError('Failed to authenticate. Please check your credentials and try again.');
-    } finally {
       setIsLoading(false);
     }
   };

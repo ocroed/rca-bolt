@@ -24,7 +24,7 @@ function App() {
 
   // Show login page if not authenticated
   if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={() => window.location.reload()} />;
+    return <LoginPage />;
   }
 
   // Show main application if authenticated
@@ -34,7 +34,7 @@ function App() {
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/active-incidents" element={<ActiveIncidents />} />
-          <Route path="/" element={<Navigate to="/dashboard\" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>
     </BrowserRouter>
