@@ -70,8 +70,17 @@ export class CogniteAuthService {
 
   async login() {
     await this.initialize();
+    
+    // Check if there's already an interaction in progress
+    const accounts = this.pca.getAllAccounts();
+    if (accounts.length > 0) {
+      // User is already logged in, store the account
+      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, accounts[0].localAccountId ?? '');
+      return;
+    }
+
     try {
-      // Use loginRedirect instead of loginPopup to avoid interaction conflicts
+      // Use loginRedirect to avoid interaction conflicts
       await this.pca.loginRedirect({
         scopes,
       });
@@ -101,8 +110,23 @@ export class CogniteAuthService {
   }
 
   async isAuthenticated(): Promise<boolean> {
+    await this.initialize();
+    
+    // First check if we have a stored account
     const account = await this.getAccount();
-    return account !== null;
+    if (account) {
+      return true;
+    }
+
+    // Check if there are any accounts available from MSAL
+    const accounts = this.pca.getAllAccounts();
+    if (accounts.length > 0) {
+      // Store the first account and return true
+      localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, accounts[0].localAccountId ?? '');
+      return true;
+    }
+
+    return false;
   }
 
   async handleRedirectResponse() {

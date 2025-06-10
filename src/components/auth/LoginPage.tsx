@@ -12,7 +12,7 @@ const LoginPage: React.FC = () => {
     
     try {
       await authService.login();
-      // loginRedirect will cause a page redirect, so no need for onLoginSuccess callback
+      // Note: loginRedirect will cause a page reload, so this code after login() may not execute
     } catch (err) {
       console.error('Login error:', err);
       setError('Failed to authenticate. Please check your credentials and try again.');

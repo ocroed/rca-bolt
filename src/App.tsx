@@ -1,14 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import ActiveIncidents from './pages/ActiveIncidents';
 import LoginPage from './components/auth/LoginPage';
 import { useAuth } from './hooks/useAuth';
+import { authService } from './services/auth/cogniteAuth';
 import { Loader2 } from 'lucide-react';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    // Handle redirect response when the app loads
+    const handleRedirect = async () => {
+      try {
+        await authService.handleRedirectResponse();
+      } catch (error) {
+        console.error('Error handling redirect response:', error);
+      }
+    };
+
+    handleRedirect();
+  }, []);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
