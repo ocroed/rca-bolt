@@ -38,16 +38,15 @@ const getToken = async () => {
       });
       localStorage.setItem('account', token.account.localAccountId ?? '');
       return token.accessToken;
-    } catch (_e) {
-      await pca.acquireTokenRedirect({
-        account,
-        scopes,
-      });
+    } catch (e) {
+      // Don't initiate interactive authentication here to avoid conflicts
+      // Let the LoginPage handle interactive authentication via loginPopup
+      throw new Error('Silent token acquisition failed. Interactive login required.');
     }
   } catch (e) {
     console.debug('Failed to get token', e);
+    throw e;
   }
-  return '';
 };
 
 export function getClient() {
