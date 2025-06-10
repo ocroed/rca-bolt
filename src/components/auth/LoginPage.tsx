@@ -1,24 +1,42 @@
-import React, { useState } from 'react';
-import { FileBarChart, Loader2, AlertCircle, Building2, Shield } from 'lucide-react';
-import { authService } from '../../services/auth/cogniteAuth';
+import React, { useState, useEffect } from 'react';
+import { FileBarChart, Loader2, AlertCircle, Building2, Shield, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 const LoginPage: React.FC = () => {
+  const { login, error, clearError, retryAuth } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
+    if (isLoading) return;
+    
     setIsLoading(true);
-    setError(null);
+    clearError();
     
     try {
-      await authService.login();
-      // Note: loginRedirect will cause a page reload, so this code after login() may not execute
+      await login();
     } catch (err) {
       console.error('Login error:', err);
-      setError('Failed to authenticate. Please check your credentials and try again.');
+      // Error is handled by useAuth hook
+    } finally {
       setIsLoading(false);
     }
   };
+
+  const handleRetry = async () => {
+    setIsLoading(true);
+    try {
+      await retryAuth();
+    } catch (err) {
+      console.error('Retry failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Clear any existing errors when component mounts
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -61,9 +79,21 @@ const LoginPage: React.FC = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle size={16} className="text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-              <span className="text-red-700 text-sm">{error}</span>
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <AlertCircle size={16} className="text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="text-red-700 text-sm block mb-2">{error}</span>
+                  <button
+                    onClick={handleRetry}
+                    disabled={isLoading}
+                    className="text-xs text-red-600 hover:text-red-800 underline flex items-center"
+                  >
+                    <RefreshCw size={12} className="mr-1" />
+                    Clear and retry
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -71,7 +101,7 @@ const LoginPage: React.FC = () => {
           <button
             onClick={handleLogin}
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
           >
             {isLoading ? (
               <>
