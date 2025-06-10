@@ -25,8 +25,19 @@ export const useAuth = () => {
     try {
       updateState({ isLoading: true, error: null });
 
-      // Handle any redirect response first
-      await authService.handleRedirectResponse();
+      // Handle any redirect response first - this is crucial for redirect flow
+      const redirectResponse = await authService.handleRedirectResponse();
+      
+      // If we just handled a successful redirect, the user is now authenticated
+      if (redirectResponse && redirectResponse.account) {
+        updateState({
+          isAuthenticated: true,
+          user: redirectResponse.account,
+          isLoading: false,
+          error: null,
+        });
+        return;
+      }
       
       // Check authentication status
       const authenticated = await authService.isAuthenticated();
@@ -41,7 +52,7 @@ export const useAuth = () => {
             isAuthenticated: false, 
             user: null, 
             isLoading: false,
-            error: 'Authentication state was corrupted and has been cleared. Please login again.'
+            error: null, // Don't show error for this case, just require re-login
           });
           return;
         }
@@ -69,15 +80,13 @@ export const useAuth = () => {
     try {
       updateState({ error: null });
       
-      const response = await authService.login();
+      // For redirect flow, this will redirect the page
+      // So we won't get a response back immediately
+      await authService.login();
       
-      updateState({
-        isAuthenticated: true,
-        user: response.account,
-        error: null,
-      });
+      // This code won't execute for redirect flow
+      // The response will be handled when the page loads after redirect
       
-      return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       updateState({ error: errorMessage });
@@ -89,13 +98,11 @@ export const useAuth = () => {
     try {
       updateState({ error: null });
       
+      // For redirect flow, this will redirect the page
       await authService.logout();
       
-      updateState({
-        isAuthenticated: false,
-        user: null,
-        error: null,
-      });
+      // This code won't execute for redirect flow
+      
     } catch (error) {
       console.error('Logout error:', error);
       // Even if logout fails, clear local state

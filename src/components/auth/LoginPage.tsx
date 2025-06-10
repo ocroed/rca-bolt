@@ -13,12 +13,13 @@ const LoginPage: React.FC = () => {
     clearError();
     
     try {
+      // For redirect flow, this will redirect the page
+      // so the loading state and this component will be unmounted
       await login();
     } catch (err) {
       console.error('Login error:', err);
-      // Error is handled by useAuth hook
-    } finally {
       setIsLoading(false);
+      // Error is handled by useAuth hook
     }
   };
 
@@ -87,7 +88,7 @@ const LoginPage: React.FC = () => {
                   <button
                     onClick={handleRetry}
                     disabled={isLoading}
-                    className="text-xs text-red-600 hover:text-red-800 underline flex items-center"
+                    className="text-xs text-red-600 hover:text-red-800 underline flex items-center disabled:opacity-50"
                   >
                     <RefreshCw size={12} className="mr-1" />
                     Clear and retry
@@ -106,7 +107,7 @@ const LoginPage: React.FC = () => {
             {isLoading ? (
               <>
                 <Loader2 size={18} className="animate-spin mr-2" />
-                Signing in...
+                Redirecting to Microsoft...
               </>
             ) : (
               'Sign in with Microsoft'
@@ -116,8 +117,8 @@ const LoginPage: React.FC = () => {
           {/* Additional Info */}
           <div className="mt-6 pt-6 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center leading-relaxed">
-              By signing in, you agree to access manufacturing data through Cognite Data Fusion.
-              Contact your system administrator if you need access.
+              You will be redirected to Microsoft's secure login page. 
+              After signing in, you'll be brought back to the application.
             </p>
           </div>
         </div>

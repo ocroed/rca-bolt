@@ -16,7 +16,7 @@ const configuration: Configuration = {
     redirectUri: VITE_APP_REDIRECT_URI,
   },
   cache: {
-    cacheLocation: 'localStorage', // Use localStorage for better persistence
+    cacheLocation: 'localStorage',
     storeAuthStateInCookie: false,
   },
 };
@@ -67,7 +67,6 @@ export class CogniteAuthService {
   }
 
   async initialize() {
-    // Ensure initialization only happens once
     if (this.initialized) {
       return;
     }
@@ -88,7 +87,7 @@ export class CogniteAuthService {
     
     // Prevent multiple concurrent login attempts
     if (this.loginInProgress) {
-      throw new Error('A login process is already active. Please wait for it to complete before trying again.');
+      throw new Error('Login is already in progress. Please wait...');
     }
 
     try {
@@ -102,18 +101,14 @@ export class CogniteAuthService {
         return { account };
       }
 
-      // Use popup for authentication to avoid iframe issues
-      const response = await this.pca.loginPopup({
+      // Use redirect for authentication - more reliable than popup
+      await this.pca.loginRedirect({
         scopes,
-        prompt: 'select_account', // Allow user to select account
+        prompt: 'select_account',
       });
       
-      if (response && response.account) {
-        localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId ?? '');
-        return response;
-      }
-
-      throw new Error('Login failed - no account returned');
+      // Note: This won't return anything as the page will redirect
+      // The response will be handled in handleRedirectResponse()
 
     } catch (error) {
       console.error('Login failed:', error);
@@ -121,9 +116,7 @@ export class CogniteAuthService {
       // Handle specific MSAL errors
       if (error instanceof BrowserAuthError) {
         if (error.errorCode === 'interaction_in_progress') {
-          throw new Error('Another authentication process is already running. Please close any open login popups, wait a moment, and try again. If the issue persists, try clearing your browser cache or use the "Clear and retry" option.');
-        } else if (error.errorCode === 'popup_window_error') {
-          throw new Error('Popup was blocked or closed. Please allow popups and try again.');
+          throw new Error('Another login process is already running. Please wait and try again.');
         }
       }
       
@@ -136,7 +129,6 @@ export class CogniteAuthService {
   async logout() {
     await this.initialize();
     
-    // Prevent multiple concurrent logout attempts
     if (this.logoutInProgress) {
       return;
     }
@@ -151,18 +143,11 @@ export class CogniteAuthService {
       localStorage.removeItem(SESSION_STORAGE_ACCOUNT_KEY);
       
       if (account) {
-        try {
-          await this.pca.logoutPopup({
-            account,
-            mainWindowRedirectUri: window.location.origin,
-          });
-        } catch (error) {
-          // If popup logout fails, try silent logout
-          console.warn('Popup logout failed, attempting silent logout:', error);
-          await this.pca.logoutSilent({
-            account,
-          });
-        }
+        // Use redirect logout for consistency
+        await this.pca.logoutRedirect({
+          account,
+          postLogoutRedirectUri: window.location.origin,
+        });
       }
     } catch (error) {
       console.error('Logout error:', error);
@@ -232,11 +217,12 @@ export class CogniteAuthService {
       const response = await this.pca.handleRedirectPromise();
       if (response && response.account) {
         localStorage.setItem(SESSION_STORAGE_ACCOUNT_KEY, response.account.localAccountId ?? '');
+        return response;
       }
       return response;
     } catch (error) {
       console.error('Error handling redirect response:', error);
-      return null;
+      throw error;
     }
   }
 
@@ -248,7 +234,12 @@ export class CogniteAuthService {
       // Clear all MSAL cache
       const accounts = this.pca.getAllAccounts();
       for (const account of accounts) {
-        await this.pca.logoutSilent({ account });
+        try {
+          await this.pca.logoutSilent({ account });
+        } catch (error) {
+          // Ignore silent logout errors during cleanup
+          console.debug('Silent logout failed during cleanup:', error);
+        }
       }
     } catch (error) {
       console.error('Error clearing auth state:', error);
