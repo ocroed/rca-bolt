@@ -1,15 +1,11 @@
-import { getClient } from './auth/cogniteAuth';
 import type { RootCauseAnalysis } from '../types';
 
-class CogniteDataService {
-  private client = getClient();
-
+class DataService {
   // RCA Data Operations
   async getRCAs(): Promise<RootCauseAnalysis[]> {
     try {
-      // TODO: Implement actual Cognite API calls
-      // This would typically involve querying time series, assets, or custom data models
-      console.log('Fetching RCAs from Cognite Data Fusion...');
+      // TODO: Implement actual data source integration
+      console.log('Fetching RCAs from data source...');
       return [];
     } catch (error) {
       console.error('Error fetching RCAs:', error);
@@ -19,8 +15,8 @@ class CogniteDataService {
 
   async createRCA(rca: Partial<RootCauseAnalysis>): Promise<RootCauseAnalysis> {
     try {
-      // TODO: Implement RCA creation in Cognite
-      console.log('Creating RCA in Cognite Data Fusion:', rca);
+      // TODO: Implement RCA creation
+      console.log('Creating RCA:', rca);
       throw new Error('Not implemented');
     } catch (error) {
       console.error('Error creating RCA:', error);
@@ -30,8 +26,8 @@ class CogniteDataService {
 
   async updateRCA(id: string, updates: Partial<RootCauseAnalysis>): Promise<RootCauseAnalysis> {
     try {
-      // TODO: Implement RCA updates in Cognite
-      console.log('Updating RCA in Cognite Data Fusion:', id, updates);
+      // TODO: Implement RCA updates
+      console.log('Updating RCA:', id, updates);
       throw new Error('Not implemented');
     } catch (error) {
       console.error('Error updating RCA:', error);
@@ -42,8 +38,9 @@ class CogniteDataService {
   // Equipment and Asset Operations
   async getEquipment(): Promise<any[]> {
     try {
-      const assets = await this.client.assets.list({ limit: 1000 });
-      return assets.items;
+      // TODO: Implement equipment data fetching
+      console.log('Fetching equipment data...');
+      return [];
     } catch (error) {
       console.error('Error fetching equipment:', error);
       throw error;
@@ -53,11 +50,9 @@ class CogniteDataService {
   // Time Series Operations
   async getTimeSeries(assetId?: number): Promise<any[]> {
     try {
-      const timeSeries = await this.client.timeseries.list({ 
-        limit: 1000,
-        assetIds: assetId ? [assetId] : undefined
-      });
-      return timeSeries.items;
+      // TODO: Implement time series data fetching
+      console.log('Fetching time series data...');
+      return [];
     } catch (error) {
       console.error('Error fetching time series:', error);
       throw error;
@@ -67,8 +62,9 @@ class CogniteDataService {
   // Events Operations (for RCA events/incidents)
   async getEvents(): Promise<any[]> {
     try {
-      const events = await this.client.events.list({ limit: 1000 });
-      return events.items;
+      // TODO: Implement events data fetching
+      console.log('Fetching events...');
+      return [];
     } catch (error) {
       console.error('Error fetching events:', error);
       throw error;
@@ -77,8 +73,9 @@ class CogniteDataService {
 
   async createEvent(event: any): Promise<any> {
     try {
-      const createdEvent = await this.client.events.create([event]);
-      return createdEvent[0];
+      // TODO: Implement event creation
+      console.log('Creating event:', event);
+      throw new Error('Not implemented');
     } catch (error) {
       console.error('Error creating event:', error);
       throw error;
@@ -86,4 +83,4 @@ class CogniteDataService {
   }
 }
 
-export const cogniteDataService = new CogniteDataService();
+export const dataService = new DataService();
